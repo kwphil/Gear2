@@ -32,34 +32,19 @@ SOFTWARE.
 
 /// @author Kora - em: phillipsw1980@gmail.com, gh: kwphil
 /// @date June 30, 2026
-/// @file main
+/// @file Implementation for include/gearlang/files.hpp
 
-#include <cstdlib>
-#include <iostream>
-
+#include <cstring>
+#include <fstream>
 #include <gearlang/files.hpp>
-#include <gearlang/lex.hpp>
 
-int main(int argc, char** argv) {
-	if(argc != 2) {
-                std::cerr << "Invalid number of arguments" << std::endl;
-                return EXIT_FAILURE;
-        }
+char* gearlang::file::fptoa(const char* path) {
+        std::ifstream file(path);
 
-        FILE_STREAM input = gearlang::file::fptoa(argv[1]);
+        if(!file.is_open()) return nullptr;
 
-        if(!input) {
-                std::cerr << "File could not be opened" << std::endl;
-                return EXIT_FAILURE;
-        }
+        std::string out, buf;
+        while(std::getline(file, buf)) out += buf + '\n';
 
-        gearlang::lex::TokenList list = gearlang::lex::Lexer(input, argv[1]).tokenize();
-
-        while(list.peek() != nullptr) {
-                std::cout << list.pop()->content << std::endl;
-        }
-
-        free(input);
-
-        return EXIT_SUCCESS;
+        return strdup(out.c_str());
 }

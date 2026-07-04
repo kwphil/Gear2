@@ -32,34 +32,16 @@ SOFTWARE.
 
 /// @author Kora - em: phillipsw1980@gmail.com, gh: kwphil
 /// @date June 30, 2026
-/// @file main
+/// @file Just some basic file manipulations
 
-#include <cstdlib>
-#include <iostream>
+#pragma once
 
-#include <gearlang/files.hpp>
-#include <gearlang/lex.hpp>
+typedef char* FILE_STREAM;
 
-int main(int argc, char** argv) {
-	if(argc != 2) {
-                std::cerr << "Invalid number of arguments" << std::endl;
-                return EXIT_FAILURE;
-        }
-
-        FILE_STREAM input = gearlang::file::fptoa(argv[1]);
-
-        if(!input) {
-                std::cerr << "File could not be opened" << std::endl;
-                return EXIT_FAILURE;
-        }
-
-        gearlang::lex::TokenList list = gearlang::lex::Lexer(input, argv[1]).tokenize();
-
-        while(list.peek() != nullptr) {
-                std::cout << list.pop()->content << std::endl;
-        }
-
-        free(input);
-
-        return EXIT_SUCCESS;
+namespace gearlang::file {
+        /// @brief Converts a file path into a C-string
+        /// @param path The path to a file (preferably absolute)
+        /// @returns The string representation of the file contents (nullptr if file did not open)
+        /// @note Caller is expected to call free on the string
+        FILE_STREAM fptoa(const char* path);
 }

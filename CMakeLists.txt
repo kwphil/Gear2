@@ -76,7 +76,7 @@ find_package(LLVM REQUIRED CONFIG)
 
 llvm_map_components_to_libnames(llvm_libs support core irreader)
 
-add_executable(gear src/main.cpp)
+add_executable(gear src/main.cpp src/files.cpp src/lex.cpp)
 
 target_link_libraries(gear PUBLIC
         # gear_parse
@@ -94,7 +94,7 @@ target_include_directories(gear SYSTEM PUBLIC
 )
 
 target_include_directories(gear PRIVATE
-        ${CMAKE_SOURCE_DIR}/../include
+        ${CMAKE_SOURCE_DIR}/include
         ${LLVM_INCLUDE_DIRS}
 )
 
