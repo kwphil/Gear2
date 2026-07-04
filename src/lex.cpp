@@ -31,9 +31,10 @@ SOFTWARE.
 */
 
 /// @author Kora - em: phillipsw1980@gmail.com, gh: kwphil
-/// @date June 30, 2026
+/// @date June 30, 2026 | July 3rd, 2026
 /// @file implementation for include/gearlang/lex.hpp
 
+#include <algorithm>
 #include <cctype>
 #include <cstring>
 #include <gearlang/lex.hpp>
@@ -41,87 +42,105 @@ SOFTWARE.
 #include <vector>
 using namespace gearlang::lex;
 
+/// @brief The classification of each char (handy for classifying tokens)
 enum class CharType {
         Alpha,
         Num,
+        Sym,
         Invalid,
 };
 
-std::string whitespace = " \0\r\n\t";
+/// @brief Just a list of common whitespace chars
+std::string whitespace = " \r\n\t";
 
+/// @brief Function that creates a new token and resets for the next token
 Token flush(std::string& content, Span& span, TokenType classify) {
         Token tok;
         tok.content = content;
         tok.span = span;
         tok.type = classify;
 
-        span.start = (span.end += 1);
+        span.end++;
+        span.start = span.end;
         content.clear();
 
         return tok;
 }
 
+TokenType classification(std::string& content) {
+        if(content[0] == '"') return TokenType::STRING;
+        if(std::ranges::all_of(content, [](unsigned char c){
+                return isalpha(c) || c == '_';
+        })) return TokenType::IDENTIFIER;
+        if(std::ranges::all_of(content, [](unsigned char c){
+                return isdigit(c) || c == '.';
+        })) return TokenType::NUMBER;
+        return TokenType::INVALID;
+}
+
 TokenList Lexer::tokenize() {
-    size_t index = 0;
-    std::string curr_content;
-    std::vector<Token> tokens;
+        size_t index = 0;
+        std::string curr_content;
+        std::vector<Token> tokens;
 
-    CharType prev_char = CharType::Invalid;
-    TokenType classify = TokenType::INVALID;
+        bool is_string = false;
 
-    Span span = {0, 0, file_name};
+        CharType prev_char = CharType::Invalid;
+        TokenType classify = TokenType::INVALID;
 
-    while (contents[index] != '\0') {
-        char c = contents[index++];
-        CharType curr_char = CharType::Invalid;
+        Span span = {0, 0, file_name};
 
-        if (std::isalpha(static_cast<unsigned char>(c)))
-            curr_char = CharType::Alpha;
-        else if (std::isdigit(static_cast<unsigned char>(c)))
-            curr_char = CharType::Num;
+        while (contents[index] != '\0') {
+                char c = contents[index++];
+                CharType curr_char = CharType::Invalid;
 
-        // if there's a whitespace, then flush
-        if (whitespace.contains(c)) {
-            if (!curr_content.empty())
+                auto next_char = [&]() {
+                        curr_content.push_back(c);
+                        span.end++;
+                        prev_char = curr_char;
+                };
+
+                if(is_string && c == '"') {
+                        next_char();
+                        tokens.push_back(flush(curr_content, span, classify));
+                        is_string = false;
+                        continue;
+                }
+         
+                if (std::isalpha(c))
+                        curr_char = CharType::Alpha;
+                else if (std::isdigit(c))
+                        curr_char = CharType::Num;
+                else if (c == '"')
+                        is_string = true;
+
+                // if there's a whitespace, then flush
+                if (whitespace.contains(c) && !is_string) {
+                        if (!curr_content.empty())
+                                tokens.push_back(flush(curr_content, span, classify));
+
+                        prev_char = CharType::Invalid;
+                        span.start++;
+                        span.end++;
+                        continue;
+                }
+
+                // boundaries
+                if (!curr_content.empty() && curr_char != prev_char && !is_string) {
+                        tokens.push_back(flush(curr_content, span, classify));
+                }
+
+                if (curr_content.empty())
+                        span.start = span.end;
+                
+                classify = classification(curr_content);
+
+                next_char();
+        }
+
+        // make sure last token gets flushed
+        if (!curr_content.empty())
                 tokens.push_back(flush(curr_content, span, classify));
 
-            prev_char = CharType::Invalid;
-            span.start++;
-            span.end++;
-            continue;
-        }
-
-        // boundaries
-        if (!curr_content.empty() && curr_char != prev_char) {
-            tokens.push_back(flush(curr_content, span, classify));
-        }
-
-        if (curr_content.empty())
-            span.start = span.end;
-
-        curr_content.push_back(c);
-        span.end++;
-
-        switch (curr_char) {
-            case CharType::Alpha:
-                classify = TokenType::IDENTIFIER;
-                break;
-
-            case CharType::Num:
-                classify = TokenType::NUMBER;
-                break;
-
-            default:
-                classify = TokenType::INVALID;
-                break;
-        }
-
-        prev_char = curr_char;
-    }
-
-    // make sure last token gets flushed
-    if (!curr_content.empty())
-        tokens.push_back(flush(curr_content, span, classify));
-
-    return TokenList(tokens, tokens.size() - 1);
+        return TokenList(tokens, tokens.size() - 1);
 }

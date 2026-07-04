@@ -31,7 +31,7 @@ SOFTWARE.
 */
 
 /// @author Kora - em: phillipsw1980@gmail.com, gh: kwphil
-/// @date June 30, 2026
+/// @date June 30, 2026 | July 3rd, 2026
 /// @file Tokenizer interface
 
 #pragma once
@@ -39,7 +39,6 @@ SOFTWARE.
 #include <cstddef>
 #include <cstdlib>
 #include <string>
-#include <string_view>
 #include <vector>
 #include "files.hpp"
 
@@ -55,6 +54,7 @@ namespace gearlang::lex {
         enum class TokenType {
                 IDENTIFIER,
                 NUMBER,
+                STRING,
                 INVALID
         };
 
