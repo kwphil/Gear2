@@ -38,9 +38,10 @@ SOFTWARE.
 
 #include <cstddef>
 #include <cstdlib>
+#include <fstream>
+#include <memory>
 #include <string>
 #include <vector>
-#include "files.hpp"
 
 namespace gearlang::lex {
         /// @brief Denotes the location of the token
@@ -65,35 +66,32 @@ namespace gearlang::lex {
                 TokenType type; /// @brief What the lexer thinks this is
         };
 
+        class Lexer;
+
         /// @brief List of tokens
-        class TokenList {
+        class TokenStream {
         private:
                 /// @brief The current array index of where the token is
                 size_t index;
-                /// @brief The number of tokens
-                size_t count;
                 /// @brief The token list
                 std::vector<Token> tokens;
+                /// @brief The lexer object that created this
+                Lexer& lexer; 
 
         public:
-                TokenList(std::vector<Token> tokens, size_t count) 
-                : index(0), count(count), tokens(tokens) { }
+                TokenStream(Lexer& lexer) 
+                : index(0), tokens({}), lexer(lexer) { }
 
                 /// @brief Returns the current token
                 /// @note Returns a nullptr when there are no more tokens
                 /// @returns The current token
                 inline const Token* peek() { 
-                        if(index > count) return nullptr;
-                        return &tokens[index];
                 }
                 
                 /// @brief Returns the current token and bumps the index
                 /// @note Returns a nullptr when there are no more tokens
                 /// @returns The current token
                 inline const Token* pop() {
-                        const Token* tok = peek();
-                        if(tok) index++;
-                        return tok;
                 }
         };
 
@@ -101,14 +99,23 @@ namespace gearlang::lex {
         /// @note Create a new Lexer object for each file opened
         class Lexer {
         private:
-                FILE_STREAM contents;
+                std::unique_ptr<std::ifstream> contents;
+                size_t index = 0;
                 const char* file_name;
 
         public:
-                Lexer(FILE_STREAM contents, const char* file_name)
-                : contents(contents), file_name(file_name) { }
+                Lexer(const char* file_name)
+                : contents(nullptr), file_name(file_name) {
+                        auto file = std::make_unique<std::ifstream>(file_name);
+                        if(!file) exit(EXIT_FAILURE);
+                        contents = std::move(file);
+                }
 
-                /// @brief Converts the current stream of chars into a list of tokens 
-                TokenList tokenize();
+                Token request_next();
+
+                bool is_done() { return contents->eof(); }
+
+                /// @brief Creates a new TokenStream instance
+                TokenStream* tokstream() { return new TokenStream(*this); }
         };
 }

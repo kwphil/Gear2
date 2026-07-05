@@ -62,6 +62,12 @@ else()
     	message("-- Compiling in release mode")
 endif()
 
+if(PREFIX)
+        message("-- Using install prefix: ${PREFIX}")
+endif()
+
+set(PREFIX_FLAG "-DGEAR_PREFIX='\"${PREFIX}\"'")
+
 if(ABORT_ERROR)
     	set_source_files_properties(
         	error.cpp
@@ -76,7 +82,10 @@ find_package(LLVM REQUIRED CONFIG)
 
 llvm_map_components_to_libnames(llvm_libs support core irreader)
 
-add_executable(gear src/main.cpp src/files.cpp src/lex.cpp)
+add_executable(gear 
+        src/main.cpp
+        src/lex.cpp
+)
 
 target_link_libraries(gear PUBLIC
         # gear_parse

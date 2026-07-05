@@ -31,14 +31,14 @@ SOFTWARE.
 */
 
 /// @author Kora - em: phillipsw1980@gmail.com, gh: kwphil
-/// @date June 30, 2026
+/// @date June 30, 2026 | July 4, 2026
 /// @file main
 
+#include "gearlang/lex.hpp"
 #include <cstdlib>
 #include <iostream>
 
-#include <gearlang/files.hpp>
-#include <gearlang/lex.hpp>
+// #include <gearlang/lex.hpp>
 
 int main(int argc, char** argv) {
 	if(argc != 2) {
@@ -46,20 +46,9 @@ int main(int argc, char** argv) {
                 return EXIT_FAILURE;
         }
 
-        FILE_STREAM input = gearlang::file::fptoa(argv[1]);
+        auto lex = gearlang::lex::Lexer(argv[1]);
 
-        if(!input) {
-                std::cerr << "File could not be opened" << std::endl;
-                return EXIT_FAILURE;
-        }
-
-        gearlang::lex::TokenList list = gearlang::lex::Lexer(input, argv[1]).tokenize();
-
-        while(list.peek() != nullptr) {
-                std::cout << list.pop()->content << std::endl;
-        }
-
-        free(input);
+        while(std::cout << lex.request_next().content << std::endl);
 
         return EXIT_SUCCESS;
 }

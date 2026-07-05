@@ -31,7 +31,7 @@ SOFTWARE.
 */
 
 /// @author Kora - em: phillipsw1980@gmail.com, gh: kwphil
-/// @date June 30, 2026 | July 3rd, 2026
+/// @date June 30, 2026 | July 4th, 2026
 /// @file implementation for include/gearlang/lex.hpp
 
 #include <algorithm>
@@ -40,6 +40,7 @@ SOFTWARE.
 #include <gearlang/lex.hpp>
 #include <string>
 #include <vector>
+#include <functional>
 using namespace gearlang::lex;
 
 /// @brief The classification of each char (handy for classifying tokens)
@@ -47,6 +48,7 @@ enum class CharType {
         Alpha,
         Num,
         Sym,
+        DQuot,
         Invalid,
 };
 
@@ -78,69 +80,49 @@ TokenType classification(std::string& content) {
         return TokenType::INVALID;
 }
 
-TokenList Lexer::tokenize() {
-        size_t index = 0;
-        std::string curr_content;
-        std::vector<Token> tokens;
+std::string read_while(std::ifstream& stream, std::function<bool(char)> check) {
+        std::string buf = "";
 
-        bool is_string = false;
+        char ch = stream.get();
 
-        CharType prev_char = CharType::Invalid;
+        do {
+                buf.push_back(ch);
+        } while(check(ch));
+
+        return buf;
+}
+
+Token Lexer::request_next() {
+        char c = contents->get();
+
+        std::string str;
+        str = c;
+        Span span = { index, index+1, file_name };
         TokenType classify = TokenType::INVALID;
 
-        Span span = {0, 0, file_name};
+        CharType cty = CharType::Invalid;
 
-        while (contents[index] != '\0') {
-                char c = contents[index++];
-                CharType curr_char = CharType::Invalid;
+        // classify
+        if(isalpha(c) || c == '_') { cty = CharType::Alpha; }
+        if(isdigit(c)) { cty = CharType::Num; }
+        if(c == '"') { cty = CharType::DQuot; }
 
-                auto next_char = [&]() {
-                        curr_content.push_back(c);
-                        span.end++;
-                        prev_char = curr_char;
-                };
+        switch(cty) {
+                case CharType::Alpha:
+                        classify = TokenType::IDENTIFIER;
+                        str = read_while(*contents, [](char ch){ return ch == '_' || isalpha(ch); });
+                        break;
+                case CharType::Num:
+                        classify = TokenType::NUMBER;
+                        str = read_while(*contents, [](char ch){ return ch == '.' || isdigit(ch); });
+                        break;
+                case CharType::DQuot:
+                        classify = TokenType::STRING;
+                        str = read_while(*contents, [](char ch){ return ch != '"'; });
+                        break;
+                default:
+                        break;
+        };
 
-                if(is_string && c == '"') {
-                        next_char();
-                        tokens.push_back(flush(curr_content, span, classify));
-                        is_string = false;
-                        continue;
-                }
-         
-                if (std::isalpha(c))
-                        curr_char = CharType::Alpha;
-                else if (std::isdigit(c))
-                        curr_char = CharType::Num;
-                else if (c == '"')
-                        is_string = true;
-
-                // if there's a whitespace, then flush
-                if (whitespace.contains(c) && !is_string) {
-                        if (!curr_content.empty())
-                                tokens.push_back(flush(curr_content, span, classify));
-
-                        prev_char = CharType::Invalid;
-                        span.start++;
-                        span.end++;
-                        continue;
-                }
-
-                // boundaries
-                if (!curr_content.empty() && curr_char != prev_char && !is_string) {
-                        tokens.push_back(flush(curr_content, span, classify));
-                }
-
-                if (curr_content.empty())
-                        span.start = span.end;
-                
-                classify = classification(curr_content);
-
-                next_char();
-        }
-
-        // make sure last token gets flushed
-        if (!curr_content.empty())
-                tokens.push_back(flush(curr_content, span, classify));
-
-        return TokenList(tokens, tokens.size() - 1);
+        return Token{ span, str, classify };
 }
